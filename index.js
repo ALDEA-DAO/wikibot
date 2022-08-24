@@ -12,8 +12,9 @@ app.use(function (req, res, next) {
   next();
 });
 
-app.get('/', (req, res) => {
-  stakeTable.getStakes()
+app.get('/getStake', (req, res) => {
+  const stakeAddress = req.query.stakeAddress;
+  stakeTable.getStakes(stakeAddress)
   .then(response => {
     res.status(200).send(response);
   })
