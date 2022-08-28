@@ -1,8 +1,9 @@
+const { getStakeAddress } = require("./lib/getStake")
+const { getAdaHandleAddress } = require("./lib/handle")
+const stakeTable = require("./lib/db");
 const express = require('express')
 const app = express()
 const port = process.env.PORT || 3001;
-
-const stakeTable = require("./lib/db");
 
 app.use(express.json())
 app.use(function (req, res, next) {
@@ -19,6 +20,30 @@ app.get('/getStake', (req, res) => {
     res.status(200).send(response);
   })
   .catch(error => {
+    res.status(500).send(error);
+  })
+})
+
+app.get('/getStakeAddress', (req, res) => {
+  const adaAddress = req.query.adaAddress;
+  getStakeAddress(adaAddress)
+  .then(response => {
+    res.status(200).send(response);
+  })
+  .catch(error => {
+    console.log(error);
+    res.status(500).send(error);
+  })
+})
+
+app.get('/getAdaHandle', (req, res) => {
+  const handleName = req.query.handleName;
+  getAdaHandleAddress(handleName)
+  .then(response => {
+    res.status(200).send(response);
+  })
+  .catch(error => {
+    console.log(error);
     res.status(500).send(error);
   })
 })
