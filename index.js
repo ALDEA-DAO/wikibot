@@ -48,6 +48,6 @@ app.get('/getAdaHandle', (req, res) => {
   })
 })
 
-app.listen(port, "0.0.0.0", () => {
+app.listen(port, () => {
   console.log(`App running on port ${port}.`)
 })
