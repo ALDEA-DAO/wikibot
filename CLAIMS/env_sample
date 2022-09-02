@@ -1,0 +1,20 @@
+#Rename this file to "env" and fill with your settings.
+#Amounts are expressed in lovelaces
+
+#SYSTEM VARS
+export CARDANO_NODE_SOCKET_PATH="/home/USER/cardano-node/CLAIM/db/socket"
+
+#SCRIPT VARS
+MY_DB="claims"
+Price1=2000000
+MINTER_FEE=500000
+Stock=123456789000000
+DUST=1500000
+ClaimLog=Claim.log
+SnapLog=Snapshot.log
+
+#PRODUCTION VARS
+APIUrl="https://cardano-mainnet.blockfrost.io/api/v0"
+POLICY1="ca5fc223596.....333239833456bcd7"
+KEY="mainnet....okYYG5i1"
+WALLET_MON="addr1.....0m45se"
