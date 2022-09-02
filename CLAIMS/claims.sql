@@ -2,8 +2,8 @@
 -- PostgreSQL database dump
 --
 
--- Dumped from database version 14.5 (Ubuntu 14.5-1.pgdg20.04+1)
--- Dumped by pg_dump version 14.5 (Ubuntu 14.5-1.pgdg20.04+1)
+-- Dumped from database version 14.5 (Ubuntu 14.5-0ubuntu0.22.04.1)
+-- Dumped by pg_dump version 14.5 (Ubuntu 14.5-0ubuntu0.22.04.1)
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -59,12 +59,14 @@ CREATE TABLE public.claim_requests (
     id integer NOT NULL,
     requester character varying(200) NOT NULL,
     valid boolean DEFAULT false,
-    sent integer NOT NULL,
-    q integer DEFAULT 0,
-    returnamt integer,
+    sent bigint NOT NULL,
+    q bigint DEFAULT 0,
+    returnamt bigint,
     fee integer DEFAULT 0 NOT NULL,
     utxo character varying(200) DEFAULT NULL::character varying,
-    error boolean DEFAULT false
+    error boolean DEFAULT false,
+    processed boolean DEFAULT false,
+    tx_id text
 );
 
 
@@ -221,6 +223,13 @@ GRANT SELECT ON TABLE public.discarded TO claims;
 --
 
 GRANT SELECT ON TABLE public.snapshot TO claims;
+
+
+--
+-- Name: DEFAULT PRIVILEGES FOR TABLES; Type: DEFAULT ACL; Schema: public; Owner: postgres
+--
+
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT SELECT ON TABLES  TO claims;
 
 
 --
