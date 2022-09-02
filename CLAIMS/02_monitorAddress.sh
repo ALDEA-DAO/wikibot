@@ -9,14 +9,14 @@ convertToADA() {
 echo $(bc <<< "scale=6; ${1} / 1000000" | sed -e 's/^\./0./') 
 }
 
-cli="/home/alfred_vilsmeier/.local/bin/cardano-cli"
+cli="/home/ubuntu/.local/bin/cardano-cli"
 if [[ -f "first_block.txt" ]]; then firstBlockToCheck=$(cat first_block.txt); else firstBlockToCheck=; fi
 
-if [[ -z $firstBlockToCheck ]]; then firstBlockToCheck=$($cli query tip --testnet-magic 2 | jq -r .block); fi
+if [[ -z $firstBlockToCheck ]]; then firstBlockToCheck=$($cli query tip --mainnet | jq -r .block); fi
 echo -e "$(date +%F_%H:%M:%S) ==>> Starting transaction monitor" | tee -a $ClaimLog
 
 checkWallet () {
-TIP=$($cli query tip --testnet-magic 2 | jq -r .block)
+TIP=$($cli query tip --mainnet | jq -r .block)
 #echo "Latest Block Tip from Chain = ${TIP}" | tee -a $ClaimLog
 if [[ ${firstBlockToCheck:=0} -ge $TIP ]]; then sleep 10; monitor; fi
 
@@ -78,9 +78,12 @@ do
 	TX_UTXO="$tx_hash#$TXindex"
 
 	if [[ ${TotalRequested:=0} -lt ${Stock} ]]; then
-		# Solo nos sirven las TX donde recibimos fondos y no somos el Sender.
-		if [[ ${TXreceiver} != ${WALLET_MON} ]] || [[ ${TXsender} = ${WALLET_MON} ]]; then echo -e "Non-Qualifying TX\n"; break; fi	
+	# Solo nos sirven las TX donde recibimos fondos y no somos el Sender.	
+		
+		checkSender=$(jq -r ".inputs[]|[.address]" <<< ${tx_info})
+		if [[ ${TXreceiver} != ${WALLET_MON} ]] || [[ ${TXsender} = ${WALLET_MON} ]] || [[ $checkSender == *"$WALLET_MON"* ]]; then echo -e "Non-Qualifying transaction"; fi	
 		if [ ! -z "${TXamount}" ] && [[ ${TXreceiver} == ${WALLET_MON} ]] ; then 
+			
 			echo -e "$(convertToADA ${TXamount}) ADA received from $TXsender, processing..." | tee -a $ClaimLog
 			
 			#SI NO ENVIO SUFICIENTES ADA
@@ -95,8 +98,7 @@ do
 					changeAmt=$(($TXamount - $FEE))
 				fi
 				
-				qReturn="INSERT INTO claim_requests (requester,valid,sent,q,returnamt,fee,utxo) VALUES ('$TXsender',false,'$TXamount',0,'$changeAmt','$FEE','$TX_UTXO');"
-				echo $qReturn
+				qReturn="INSERT INTO claim_requests (requester,valid,sent,q,returnamt,fee,utxo,error,processed) VALUES ('$TXsender',false,'$TXamount',0,'$changeAmt','$FEE','$TX_UTXO',false,false);"
 				psql --dbname "$MY_DB" -tc "$qReturn";
 
 			else #SI ENVIÓ LA CANTIDAD CORRECTA DE ADA
@@ -118,6 +120,7 @@ do
 					valid="false"
 					Qclaiming=$Qallowed
 				else
+				#SI VAMOS A PERMITIR CLAIM, VERIFICAMOS SI ALCANZA STOCK PARA ORDEN COMPLETA O PARCIAL
 					if [[ $((${TotalRequested:=0} + $Qallowed)) -le ${Stock} ]]; then
 						Qclaiming=$Qallowed
 						echo "Stock remaining: $(($Stock - ($TotalRequested + $Qclaiming)))" | tee -a $ClaimLog
@@ -129,12 +132,25 @@ do
 					fi
 					valid="true"
 					qUpdate="UPDATE allowed SET q = '$Qallowed', claimed = true WHERE stake = '$Sender'"
-					psql --dbname "$MY_DB" -tc "$qUpdate";	
+					psql --dbname "$MY_DB" -tc "$qUpdate";
+					
+					#VERIFICAMOS SI TENEMOS PAYMENT ADDR REGISTRADO EN SNAPSHOT
+					qCheckOwner="SELECT COUNT(*) FROM snapshot WHERE payment = '$TXsender'"
+					chkOwner=$(psql --dbname "$MY_DB" -tc "$qCheckOwner";)
+					# Si la dirección coincide (Nami) envia directo. Si la dirección no es la misma del snapshot, buscamos su primera address 
+					# y enviamos ahi para evitar exploit de FrankenAddresses
+					if [[ $chkOwner -eq 0 ]] ; then 
+						realOwner=$(curl -s -X GET $APIUrl/accounts/$Sender/addresses -H "project_id: $KEY" | jq -r '.[0].address')
+						echo -e "Sending tokens to real owner: $realOwner" | tee -a $ClaimLog
+						TXsender=$realOwner
+					else
+						echo -e "Sending tokens to sender address"
+					fi	
 				#Hasta aqui ejecutamos si tiene tokens disponibles
 				fi
 				
 				echo "Reserving $Qclaiming token(s). Sending back $(convertToADA ${changeAmt}) \$ADA" | tee -a $ClaimLog
-				qClaim="INSERT INTO claim_requests (requester,valid,sent,q,returnamt,fee,utxo) VALUES ('$TXsender','$valid','$TXamount','$Qclaiming','$changeAmt','$MINTER_FEE','$TX_UTXO');"
+				qClaim="INSERT INTO claim_requests (requester,valid,sent,q,returnamt,fee,utxo,error,processed) VALUES ('$TXsender','$valid','$TXamount','$Qclaiming','$changeAmt','$MINTER_FEE','$TX_UTXO',false,false);"
 				psql --dbname "$MY_DB" -tc "$qClaim";
 			#Hasta aqui ejecutamos si alcanza para reclamar
 			fi 
@@ -142,12 +158,13 @@ do
 		fi
 	else #QUE PASA SI NO HAY MAS STOCK
 		# Solo nos sirven las TX donde recibimos fondos.
-		if [[ ${TXreceiver} != ${WALLET_MON} ]] || [[ ${TXsender} = ${WALLET_MON} ]]; then echo -e "Non-Qualifying TX\n"; break; fi	
+		checkSender=$(jq -r ".inputs[]|[.address]" <<< ${tx_info})
+		if [[ ${TXreceiver} != ${WALLET_MON} ]] || [[ ${TXsender} = ${WALLET_MON} ]] || [[ $checkSender == *"$WALLET_MON"* ]]; then echo -e "Non-Qualifying TX\n"; fi
 		
 		if [ ! -z "${TXamount}" ] && [[ ${TXreceiver} == ${WALLET_MON} ]] ; then 
 			echo -e "$(convertToADA ${TXamount}) ADA received from $TXsender, but there's no stock left, processing refund..." | tee -a $ClaimLog
 				
-			qReturn="INSERT INTO claim_requests (requester,valid,sent,q,returnamt,fee,utxo) VALUES ('$TXsender',false,'$TXamount',0,'$TXamount',0,'$TX_UTXO');"
+			qReturn="INSERT INTO claim_requests (requester,valid,sent,q,returnamt,fee,utxo,error,processed) VALUES ('$TXsender',false,'$TXamount',0,'$TXamount',0,'$TX_UTXO',false,false);"
 			psql --dbname "$MY_DB" -tc "$qReturn"; 
 		fi
 	fi
@@ -173,12 +190,12 @@ do
 	TX_UTXO="$tx_hash#$TXindex"
 
 	# Solo nos sirven las TX donde recibimos fondos.
-	if [[ ${TXreceiver} != ${WALLET_MON} ]] || [[ ${TXsender} = ${WALLET_MON} ]]; then echo -e "Non-Qualifying TX\n"; break; fi	
+	if [[ ${TXreceiver} != ${WALLET_MON} ]] || [[ ${TXsender} = ${WALLET_MON} ]] || [[ $checkSender == *"$WALLET_MON"* ]]; then echo -e "Non-Qualifying TX\n"; break; fi	
 	
 	if [ ! -z "${TXamount}" ] && [[ ${TXreceiver} == ${WALLET_MON} ]] ; then 
 		echo -e "$(convertToADA ${TXamount}) ADA received from $TXsender, but claiming period is over, processing refund..." | tee -a $ClaimLog
 			
-		qReturn="INSERT INTO claim_requests (requester,valid,sent,q,returnamt,fee,profit,utxo,pending) VALUES ('$TXsender',false,'$TXamount',0,'$TXamount',0,0,'$TX_UTXO',0);"
+		qReturn="INSERT INTO claim_requests (requester,valid,sent,q,returnamt,fee,utxo,error,processed) VALUES ('$TXsender',false,'$TXamount',0,'$TXamount',0,'$TX_UTXO',false,false);"
 		psql --dbname "$MY_DB" -tc "$qReturn"; 
 	fi
 done 
@@ -193,8 +210,8 @@ monitor () {
 }
 
 
-#Cuanto dura el periodo de claim, en segundos (un dia = 86400)
-endClaim=$(( $(date +%s) + (86400 * 14)))
+#Cuanto dura el periodo de claim, en segundos (un dia = 86400) o epoch
+endClaim=1663354800
 #Cuanto tiempo seguimos procesando devoluciones
 endReturn=$(( $endClaim + 86400 ))
 
