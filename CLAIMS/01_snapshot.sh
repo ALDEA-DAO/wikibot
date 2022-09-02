@@ -48,12 +48,26 @@ for j in "${ASSETS[@]}"; do
 ) &
 ((i=i%N)); ((i++==0)) && wait
 done
+sleep 5
 }
 
 
 GetList () { 
-	qGetList="SELECT id,name,type,payment FROM snapshot;"
-	echo -e "Full list of assets and holders"
+	qGetList="SELECT stake,
+		sum(1 * CASE type
+                     WHEN 'Genesis'  THEN 4824
+                     WHEN 'Governance'   THEN 1157
+                     END) AS Q,
+		sum(CASE type
+                     WHEN 'Genesis'  THEN 1
+                     WHEN 'Governance'   THEN 0
+                     END) AS qGenesis,
+		sum(CASE type
+                     WHEN 'Genesis'  THEN 0
+                     WHEN 'Governance'   THEN 1
+                     END) AS qGovernance
+		FROM snapshot  WHERE stake IS NOT NULL OR stake <> '' GROUP  BY stake;"
+	echo -e "Full list of allowed wallets"
 	psql --dbname "$MY_DB" -P pager=off -tc "$qGetList";
 }
 
@@ -69,11 +83,10 @@ CleanNull () {
 }
 
 InsertAllowed () {
-	qInsertAllowed="TRUNCATE TABLE allowed RESTART IDENTITY; 
-		INSERT INTO allowed(stake,q,qGenesis,qGovernance) SELECT stake,
+	qInsertAllowed="INSERT INTO allowed(stake,q,qGenesis,qGovernance) SELECT stake,
 		sum(1 * CASE type
-                     WHEN 'Genesis'  THEN 4860
-                     WHEN 'Governance'   THEN 1193
+                     WHEN 'Genesis'  THEN 4824
+                     WHEN 'Governance'   THEN 1157
                      END) AS Q,
 		sum(CASE type
                      WHEN 'Genesis'  THEN 1
@@ -83,7 +96,7 @@ InsertAllowed () {
                      WHEN 'Genesis'  THEN 0
                      WHEN 'Governance'   THEN 1
                      END) AS qGovernance
-		FROM snapshot  WHERE stake IS NOT NULL OR stake <> '' GROUP  BY 1;"
+		FROM snapshot  WHERE stake IS NOT NULL OR stake <> '' GROUP  BY stake;"
 	psql --dbname "$MY_DB" -tc "$qInsertAllowed";
 }
 
