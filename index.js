@@ -16,10 +16,22 @@ app.use(function (req, res, next) {
   next();
 });
 
-app.get("/getRewards", (req, res) => {
+app.get("/getSpecRewards", (req, res) => {
   const stakeAddress = req.query.stakeAddress;
   stakeTable
-    .getRewards(stakeAddress)
+    .getSpecRewards(stakeAddress)
+    .then((response) => {
+      res.status(200).send(response);
+    })
+    .catch((error) => {
+      res.status(500).send(error);
+    });
+});
+
+app.get("/getIspoRewards", (req, res) => {
+  const stakeAddress = req.query.stakeAddress;
+  stakeTable
+    .getIspoRewards(stakeAddress)
     .then((response) => {
       res.status(200).send(response);
     })
