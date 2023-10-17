@@ -16,10 +16,10 @@ app.use(function (req, res, next) {
   next();
 });
 
-app.get("/getStake", (req, res) => {
+app.get("/getRewards", (req, res) => {
   const stakeAddress = req.query.stakeAddress;
   stakeTable
-    .getStakes(stakeAddress)
+    .getRewards(stakeAddress)
     .then((response) => {
       res.status(200).send(response);
     })
