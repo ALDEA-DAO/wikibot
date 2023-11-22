@@ -1,9 +1,10 @@
 const { getStakeAddress } = require("./lib/getStake");
 const { getAdaHandleAddress } = require("./lib/handle");
+const { searchWiki } = require("./lib/searchWiki");
 const stakeTable = require("./lib/db");
 const express = require("express");
 const app = express();
-const port = process.env.PORT || 3001;
+const port = process.env.PORT || 30001;
 
 app.use(express.json());
 app.use(function (req, res, next) {
@@ -16,45 +17,9 @@ app.use(function (req, res, next) {
   next();
 });
 
-app.get("/getSpecRewards", (req, res) => {
-  const stakeAddress = req.query.stakeAddress;
-  stakeTable
-    .getSpecRewards(stakeAddress)
-    .then((response) => {
-      res.status(200).send(response);
-    })
-    .catch((error) => {
-      res.status(500).send(error);
-    });
-});
-
-app.get("/getIspoRewards", (req, res) => {
-  const stakeAddress = req.query.stakeAddress;
-  stakeTable
-    .getIspoRewards(stakeAddress)
-    .then((response) => {
-      res.status(200).send(response);
-    })
-    .catch((error) => {
-      res.status(500).send(error);
-    });
-});
-
-app.get("/getStakeAddress", (req, res) => {
-  const adaAddress = req.query.adaAddress;
-  getStakeAddress(adaAddress)
-    .then((response) => {
-      res.status(200).send(response);
-    })
-    .catch((error) => {
-      console.log(error);
-      res.status(500).send(error);
-    });
-});
-
-app.get("/getAdaHandle", (req, res) => {
-  const handleName = req.query.handleName;
-  getAdaHandleAddress(handleName)
+app.get("/searchWiki", (req, res) => {
+  const searchTerms = req.query.searchTerms;
+  searchWiki(searchTerms)
     .then((response) => {
       res.status(200).send(response);
     })
