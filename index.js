@@ -1,8 +1,11 @@
 require("dotenv").config();
 const { Saludo, EnterTerms, NoResults } = require("./lib/responses");
 const axios = require("axios").default;
+const cheerio = require("cheerio");
+const pretty = require("pretty");
 const { Telegraf } = require('telegraf')
 const { message } = require('telegraf/filters')
+
 
 const searchWiki = async (searchTerms,ctx) => {
   if (searchTerms.length === 0) {
@@ -13,34 +16,30 @@ const searchWiki = async (searchTerms,ctx) => {
   if (searchTerms.substring(0, 8) === "/search ") {
 	  var Terms = searchTerms.substring(8)
 	  console.log('BUSCANDO: ' + Terms);
-	  axios.get(`http://aldeawiki.org/w/api.php`, {
+	  axios.get(`http://aldeawiki.org/w/index.php`, {
         params: { 
-				action: 'query', 
-				list: 'search',
-				srwhat: 'text',
-				srlimit: '5',
-				srnamespace: '0|4',
-				format: 'json',
-				utf8: '',
-				srsort: 'relevance',
-				srenablerewrites: 'true',
-				srprop: 'snippet|sectiontitle',
-				srinfo: 'totalhits',
-				srqiprofile: 'classic',
-				srsearch: Terms
+				fulltext: '0', 
+				search: Terms
 				},
 	   headers:	{
 				'accept-encoding': 'null'
 	   }
 	},
 	{
-      responseType: 'json',
+      responseType: 'text',
     })
 	.then(response => {
     const contentType = response.headers["content-type"];
-    const data = response.data;
 		
-	//console.log(data.query);
+	
+	const WebResponse = cheerio.load(response.data);
+	//console.log(WebResponse);
+	const Parser = WebResponse(".mw-page-title-main");
+	
+	console.log(pretty(Parser.html()));
+	ctx.reply(`Resultado: ` + pretty(Parser.html()) + 
+	`
+	https://aldeawiki.org/` + pretty(Parser.html()));
 	
 	if (data.query.searchinfo.totalhits == 0) {
 		console.log(NoResults);
@@ -78,11 +77,10 @@ const bot = new Telegraf(process.env.BOT_TOKEN)
 bot.start((ctx) => ctx.reply(Saludo))
 bot.help((ctx) => ctx.reply(Saludo))
 bot.command('search', (ctx) => {
-  // Using context shortcut
-  //console.log(ctx.message.text);
-  let TGreply = searchWiki(ctx.message.text,ctx)
-  //ctx.reply(TGreply)
+
+let TGreply = searchWiki(ctx.message.text,ctx)
 })
+
 bot.launch()
 
 // Enable graceful stop
