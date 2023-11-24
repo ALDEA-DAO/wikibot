@@ -34,21 +34,23 @@ const searchWiki = async (searchTerms,ctx) => {
 	
 	const WebResponse = cheerio.load(response.data);
 	//console.log(WebResponse);
-	const Parser = WebResponse(".mw-page-title-main");
+	const UrlParser = WebResponse(".mw-page-title-main");
+	const prettyUrlParser = pretty(UrlParser.html());
+	const cleanUrlParser = prettyUrlParser.replace(' ','_');
 	
-	console.log(pretty(Parser.html()));
-	ctx.reply(`Resultado: ` + pretty(Parser.html()) + 
+	console.log(pretty(UrlParser.html()));
+	ctx.reply(`Resultado: ` + prettyUrlParser + 
 	`
-	https://aldeawiki.org/` + pretty(Parser.html()));
+	https://aldeawiki.org/` + cleanUrlParser);
 	
-	if (data.query.searchinfo.totalhits == 0) {
-		console.log(NoResults);
-		ctx.reply(NoResults);			
-	} else {
+//	if (data.query.searchinfo.totalhits == 0) {
+//		console.log(NoResults);
+//		ctx.reply(NoResults);			
+//	} else {
 	//	console.log('Hay Resultados');
-		console.log('Results: ' + data.query.searchinfo.totalhits + 
-					' Showing: ' + data.query.search.length)
-		for (i=0;i<data.query.search.length;i++) {
+//		console.log('Results: ' + data.query.searchinfo.totalhits + 
+//					' Showing: ' + data.query.search.length)
+//		for (i=0;i<data.query.search.length;i++) {
 			//console.log(data.query.search[i]);
 
 			//ctx.reply(data.query.search[i]);
@@ -56,7 +58,7 @@ const searchWiki = async (searchTerms,ctx) => {
 //			ctx.reply(data.query.search[i]['title'] + `
 //			\"https://aldeawiki.org/` + data.query.search[i]['title'] + `\"
 //			` + data.query.search[i]['snippet']);
-		}
+//		}
 		
 //		var results = data.query.search.map(function(item) {
 //			console.log(item['title']);
@@ -64,8 +66,7 @@ const searchWiki = async (searchTerms,ctx) => {
 //			\"https://aldeawiki.org/` + item['title'] + `\"
 //			` + item['snippet']);
 //		});
-
-	}
+//	}
 	})
 	.catch((err) => console.log(`Error: ${err}`))
 	};
