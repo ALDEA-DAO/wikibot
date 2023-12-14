@@ -4,9 +4,9 @@ const { searchWiki } = require('./lib/searchWiki');
 const { InlineSearch } = require('./lib/inlineQuery.js');
 const { Telegraf } = require('telegraf');
 const { message } = require('telegraf/filters');
-//const readline = require('readline');
-//const { stdin: input, stdout: output } = require('node:process');
-//const algoliasearch = require('algoliasearch')
+const OpenAI = require('openai');
+const readline = require('readline');
+const { stdin: input, stdout: output } = require('node:process');
 
 const bot = new Telegraf(process.env.BOT_TOKEN)
 bot.start((ctx) => ctx.reply(Saludo))
@@ -36,37 +36,24 @@ process.on('warning', (warning) => {
   console.warn(warning.stack);   // Print the stack trace
 });
 
-/*
-const client = algoliasearch(process.env.ALGOLIA_ID, process.env.ALGOLIA_SECRET)
-const index = client.initIndex('aldeaorg');
-
-index.search('Que es blockchain?', {
-  attributesToRetrieve: ['url', 'url_without_anchor', 'content', 'lang', 'image', 'thumb_url', 'thumb_cap'],
-  restrictSearchableAttributes: 'content',
-  hitsPerPage: 2,
-}).then(({ hits }) => {
-  console.log(hits);
+const openai = new OpenAI({
 });
-
 
 var userInterface = readline.createInterface({ input, output });
 
 userInterface.prompt();
 
-
 userInterface.on("line", async (input) => {
-  await index
-	.search(input, {
-		attributesToRetrieve: ['url', 'url_without_anchor', 'content', 'lang', 'image', 'thumb_url', 'thumb_cap', '_snippetResult.text'],
-		restrictSearchableAttributes: 'content',
-		hitsPerPage: 2,
-	}).then(({ hits }) => {
-		console.log(hits);
-		userInterface.prompt();
+  await openai
+    .chat.completions.create({
+      model: "gpt-3.5-turbo",
+      messages: [{ role: "user", content: input }],
     })
-		.catch((e) => {
-		console.log(e);
+    .then((res) => {
+      console.log(res.data.choices[0].message.content);
+      userInterface.prompt();
+    })
+    .catch((e) => {
+      console.log(e);
     });
 });
-
-*/
