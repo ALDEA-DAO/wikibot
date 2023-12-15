@@ -16,6 +16,10 @@ bot.command('search', (ctx) => {
 	let TGreply = searchWiki(ctx.message.text,ctx)
 })
 
+bot.command('buscar', (ctx) => {
+	let TGreply = searchWiki(ctx.message.text,ctx)
+})
+
 bot.on("inline_query", async (ctx) => {
 	console.log(`CTX:
 	` + ctx 
