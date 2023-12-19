@@ -1,8 +1,9 @@
 require("dotenv").config();
-const { Saludo } = require("./lib/responses");
-const { searchWiki } = require('./lib/searchWiki');
+const { Saludo } = require("./lib/responses.js");
+const { searchWiki } = require('./lib/searchWiki.js');
 const { InlineSearch } = require('./lib/inlineQuery.js');
 const { algoSearch, manualSearch } = require('./lib/algolia.js');
+const { randomPage } = require('./lib/random.js');
 const { Telegraf } = require('telegraf');
 const { message } = require('telegraf/filters');
 
@@ -27,6 +28,14 @@ bot.on('inline_query', async (ctx) => {
 	` + ctx.inlineQuery.query);
 	let TGreply = await InlineSearch(ctx.inlineQuery.query,ctx)
 });
+
+bot.command('azar', (ctx) => {
+	let TGreply = randomPage(ctx)
+})
+
+bot.command('random', (ctx) => {
+	let TGreply = randomPage(ctx)
+})
 
 bot.on('message', (ctx) => {
 	let TGreply = algoSearch(ctx.message.text,ctx)
