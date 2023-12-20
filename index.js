@@ -21,11 +21,6 @@ bot.command('buscar', (ctx) => {
 })
 
 bot.on('inline_query', async (ctx) => {
-	console.log(`CTX:
-	` + ctx 
-	+ `
-	inQuery: 
-	` + ctx.inlineQuery.query);
 	let TGreply = await InlineSearch(ctx.inlineQuery.query,ctx)
 });
 
